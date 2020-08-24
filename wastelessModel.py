@@ -116,6 +116,7 @@ df['InfluenssaRiski'] = df.apply(lambda row: dfterveys[(dfterveys['Vuosi'] == ro
 
 df['ViikkoCont'] = df.apply(lambda row: row['Viikko'] -52, axis=1)
 
+
 #%%
 from sklearn import linear_model
 from sklearn import preprocessing
