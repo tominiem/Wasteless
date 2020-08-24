@@ -116,6 +116,10 @@ df['InfluenssaRiski'] = df.apply(lambda row: dfterveys[(dfterveys['Vuosi'] == ro
 
 df['ViikkoCont'] = df.apply(lambda row: row['Viikko'] -52, axis=1)
 
+#%%
+for i in range(1,6):
+    df['SuoriteLag'+str(i)] = df['Suoritteet'].shift(i)
+df['SuoriteMA'] = df.apply(lambda row: np.mean([row['SuoriteLag1'],row['SuoriteLag2'],row['SuoriteLag3'],row['SuoriteLag4'],row['SuoriteLag5']]), axis=1)
 
 #%%
 from sklearn import linear_model
@@ -128,7 +132,7 @@ dfs = dfs[dfs['Suoritteet'] < 600]
 dfs = dfs[dfs['Date'] > pd.to_datetime('2017-11-27')]
 
 Xruokalajit = pd.get_dummies(dfs['Ruokalaji'])
-Xmuut = dfs[['Evaat', 'InfluenssaRiski']].values
+Xmuut = dfs[['Evaat', 'SuoriteMA']].values
 X = np.concatenate((Xruokalajit, Xmuut), axis=1)
 y = np.array(dfs['Suoritteet'])
 X_train, X_test, y_train, y_test = train_test_split(X,
@@ -145,11 +149,11 @@ print('Naivin mallin tarkkuus:', mean_absolute_error(y_test, np.repeat(suoriteme
 
 #%%
 dfh = df.dropna(subset=['Havikki'])
-dfh = dfh[dfh['Suoritteet'] < 600]
-dfh = dfh[dfh['Date'] > pd.to_datetime('2017-11-27')]
+dfh = dfh[dfh['Havikki'] > 0]
+dfh = dfh[dfh['Date'] > pd.to_datetime('2020-1-1')]
 
 Xruokalajit = pd.get_dummies(dfh['Ruokalaji'])
-Xmuut = dfh[['Evaat','InfluenssaRiski']].values
+Xmuut = dfh[['Evaat']].values
 X = np.concatenate((Xruokalajit, Xmuut), axis=1)
 y = np.array(dfh['Havikki'])
 X_train, X_test, y_train, y_test = train_test_split(X,
@@ -183,7 +187,11 @@ plt.plot(dfs['Date'].values, dfs['Suoritteet'].values, color='black', label='Tot
 plt.plot(dfs['Date'].values, dfs['EnnusteLR'].values, color='red', label='Ennustetut suoritteet')
 plt.legend()
 #%%
-
+plt.figure()
+plt.plot(dfh['Date'].values, dfh['Havikki'].values, color='black', label='Toteutuneet hävikit')
+plt.plot(dfh['Date'].values, dfh['EnnusteLR'].values, color='red', label='Ennustetut hävikit')
+plt.legend()
+#%%
 dfyhd = pd.read_csv('yhdistetty_aineisto.csv', encoding='latin')
 X = dfyhd.drop(['Lounas koulut', 'pvm'], axis=1)
 y = dfyhd['Lounas koulut'].values
