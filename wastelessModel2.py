@@ -2,7 +2,6 @@ import pyodbc
 import pandas as pd
 import numpy as np
 from sklearn import linear_model
-import re
 
 #%%
 server = 'wasteless.database.windows.net' 
@@ -22,7 +21,7 @@ df['Date'] = pd.to_datetime(df['DateSID'], format='%Y%m%d')
 dfevents['Date'] = pd.to_datetime(dfevents['DateSID'], format='%Y%m%d')
 dfstudents['Date'] = pd.to_datetime(dfstudents['DateSID'], format='%Y%m%d')
 
-today = pd.to_datetime('2020-10-19')
+today = pd.to_datetime('2020-3-10')
 #%%
 dfevents['PackedLunchCount'].fillna(0, inplace=True)
 df['PackedLunchCount'] = df.apply(lambda row: np.max(dfevents['PackedLunchCount'].loc[dfevents['Date']==row['Date']]), axis=1)
@@ -36,11 +35,12 @@ df['StudentCountTotal'].fillna(method='ffill', inplace=True)
 #%%
 df.dropna(subset=['Menu'], inplace=True)
 df['MenuClass'] = df.apply(lambda row: row['Menu'].split(',', 1)[0].split('/', 1)[0].split(' ', 1)[0], axis=1)
-df.replace(to_replace=['\nTalon', 'Hedelmäinen', 'Makkara-', 'Kala(kasvis)keitto', 'Ohra-riisipuuro', 'Suikalelihakastike', 'Kappalekala', 'Broileripatukka'],
-           value=['Talon', 'Broilerikastike', 'Makkarakeitto', 'Kalakeitto', 'Riisi-ohrapuuro', 'Lihakastike', 'Kalaleike', 'Broilerinugetti'], inplace=True)
+df.replace(to_replace=['\nTalon', 'Hedelmäinen', 'Makkara-', 'Kala(kasvis)keitto', 'Ohra-riisipuuro', 'Suikalelihakastike', 'Kappalekala', 'Broileripatukka', 'Kiusaus'+chr(160)+'(kebab', 'Kebab-'],
+           value=['Talon', 'Broilerikastike', 'Makkarakeitto', 'Kalakeitto', 'Riisi-ohrapuuro', 'Lihakastike', 'Kalaleike', 'Broilerinugetti', 'Kiusaus', 'Kiusaus'], inplace=True)
 
 df = pd.concat([df, pd.get_dummies(df['MenuClass'], prefix='MenuCode')], axis=1)
 menucols = [col for col in df.columns if 'MenuCode' in col]
+
 #%%
 for i in range(1,6):
     df['MealTotalLag'+str(i)] = df['MealTotal'].shift(i)
@@ -55,7 +55,7 @@ dftrain = dftrain[dftrain['MealTotal'] < 600]
 
 #%%
 Xmenu = dftrain[menucols].values
-Xother = dftrain[['MealTotalMA', 'TET', 'Leirikoulu', 'StudentCountTotal']].values
+Xother = dftrain[['MealTotalMA', 'TET', 'Leirikoulu', 'PackedLunchCount']].values
 X = np.concatenate((Xmenu, Xother), axis=1)
 y = np.array(dftrain['MealTotal'])
 
@@ -65,7 +65,7 @@ dftrain['PredictedMealTotal'] = modelMeal.predict(X)
 #%%
 dftrainwaste = df.dropna(subset=['WasteTotalKg'])
 Xmenu = dftrainwaste[menucols].values
-Xother = dftrainwaste[['MealTotalMA', 'TET', 'Leirikoulu', 'StudentCountTotal']].values
+Xother = dftrainwaste[['MealTotalMA', 'TET', 'Leirikoulu', 'PackedLunchCount']].values
 X = np.concatenate((Xmenu, Xother), axis=1)
 #X = Xmenu
 y = np.array(dftrainwaste['WasteTotalKg'])
@@ -78,7 +78,7 @@ dftrainwaste['PredictedWasteTotalKg'] = modelWaste.predict(X)
 dftest = df.loc[(df['Date'] >= today) & (df['Date'] < today + pd.DateOffset(days=8))]
 dftest['MealTotalMA'].fillna(method='ffill', inplace=True)
 Xtestmenu = dftest[menucols].values
-Xtestother = dftest[['MealTotalMA', 'TET', 'Leirikoulu', 'StudentCountTotal']].values
+Xtestother = dftest[['MealTotalMA', 'TET', 'Leirikoulu', 'PackedLunchCount']].values
 Xtest = np.concatenate((Xtestmenu, Xtestother), axis=1)
 dftest['PredictedMealTotal'] = modelMeal.predict(Xtest)
 #Xtest = Xtestmenu
